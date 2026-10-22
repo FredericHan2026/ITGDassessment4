@@ -53,6 +53,22 @@ Best scores come from `PlayerPrefs` via `HighScoreDisplay.cs` and read 000000 /
 00:00:00 until a run has been saved. Level 2 is greyed out until that scene
 exists.
 
+## The HUD
+
+`Level01` carries a Screen Space - Overlay canvas called `HUD`, scaled the same
+way as the title screen. The maze fills the canvas vertically at both 16:9 and
+4:3, so the HUD lives in the side margins: level name, score and lives down the
+left, the round clock and the ghost scared countdown down the right, and Exit in
+the bottom-right corner. The scared countdown hides itself whenever it is at
+zero.
+
+`HUDController.cs` is display only. It holds no game rules; the round logic
+calls `AddScore`, `SetLives` and `ShowScared` and tells it when to run the
+clock. Exit is the one control that acts on its own.
+
+Each seal also carries a World Space canvas (`Ghost1Canvas` through
+`Ghost4Canvas`) showing which ghost it is.
+
 ## Movement
 
 All motion is hand-written and frame-rate independent. `Tweener.cs` interpolates
