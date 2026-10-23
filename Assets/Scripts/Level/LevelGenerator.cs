@@ -153,6 +153,37 @@ public class LevelGenerator : MonoBehaviour
         return value == Empty || value == Pellet || value == PowerPellet;
     }
 
+    /// <summary>
+    /// Wraps a cell that has run off the left or right edge round to the other
+    /// side, which is how the tunnel row works. False for anything else, so
+    /// walking off the top or bottom is simply blocked.
+    /// </summary>
+    public bool TryWrap(int row, int column, out int wrappedColumn)
+    {
+        wrappedColumn = column;
+
+        if (row < 0 || row >= Rows)
+        {
+            return false;
+        }
+
+        if (column < 0)
+        {
+            wrappedColumn = Columns - 1;
+        }
+        else if (column >= Columns)
+        {
+            wrappedColumn = 0;
+        }
+        else
+        {
+            return false;
+        }
+
+        // Only a row that is open at both edges is a tunnel.
+        return IsWalkable(row, 0) && IsWalkable(row, Columns - 1);
+    }
+
     /// <summary>As IsWalkable, but ghosts may also pass through their own gate.</summary>
     public bool IsWalkableForGhost(int row, int column)
     {
