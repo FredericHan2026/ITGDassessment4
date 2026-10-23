@@ -20,20 +20,28 @@ public class DustTrail : MonoBehaviour
 
     [Header("Look")]
     [SerializeField] private Sprite puffSprite;
-    [SerializeField] private Color tint = new Color(0.86f, 0.95f, 1f, 0.75f);
+    [SerializeField] private Color tint = new Color(0.88f, 0.96f, 1f, 0.9f);
     [SerializeField] private int sortingOrder = 15;
+
+    [Tooltip("Where puffs are parked. Must NOT be a child of PacStudent, or the "
+             + "puffs travel along with him instead of being left behind.")]
+    [SerializeField] private Transform puffParent;
 
     [Header("Timing")]
     [Tooltip("Seconds between puffs while emitting.")]
-    [SerializeField] private float interval = 0.07f;
+    [SerializeField] private float interval = 0.05f;
 
     [Tooltip("How long each puff lasts.")]
-    [SerializeField] private float lifetime = 0.45f;
+    [SerializeField] private float lifetime = 0.6f;
 
     [Header("Size")]
-    [SerializeField] private float startScale = 0.34f;
-    [SerializeField] private float endScale = 0.06f;
+    [SerializeField] private float startScale = 0.55f;
+    [SerializeField] private float endScale = 0.12f;
     [SerializeField] private float rise = 0.35f;
+
+    [Tooltip("Where the puff leaves from, relative to PacStudent. Down a little "
+             + "so it looks kicked up from his feet.")]
+    [SerializeField] private Vector2 offset = new Vector2(0f, -0.28f);
 
     private readonly List<Puff> _live = new List<Puff>();
     private float _sinceLast;
@@ -64,8 +72,15 @@ public class DustTrail : MonoBehaviour
     private void Spawn()
     {
         GameObject go = new GameObject("Puff");
-        go.transform.SetParent(transform, false);
-        go.transform.position = transform.position;
+
+        // Deliberately not parented to this transform: a puff has to stay where
+        // it was dropped while PacStudent keeps going.
+        if (puffParent != null)
+        {
+            go.transform.SetParent(puffParent, false);
+        }
+
+        go.transform.position = transform.position + new Vector3(offset.x, offset.y, 0f);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = puffSprite;
