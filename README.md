@@ -76,6 +76,37 @@ between two points using accumulated `Time.deltaTime`; there is no Rigidbody
 driving anything, no CharacterController and no built-in or third-party movement
 helper anywhere in the project.
 
+`PacStudentController.cs` uses the lastInput / currentInput pattern.  lastInput
+remembers the most recent key pressed; currentInput is the direction actually
+being travelled.  At the end of every cell lastInput gets first refusal, and if
+that way is blocked the old currentInput carries on.  If neither is possible
+PacStudent stops and the wall clip loops instead of the walking clip.  Speed is
+5 cells a second.
+
+`DustTrail.cs` kicks up a small snow puff behind PacStudent while it is moving.
+Each puff is a sprite that fades, shrinks and drifts over its lifetime.
+
+## The level generator
+
+`LevelGenerator.cs` stores the top-left quadrant of the maze and mirrors it
+right, then down.  Wall pieces are not stored with a rotation: each one works
+its own out from the neighbours it connects to, so editing the quadrant is
+enough to change the level.
+
+Level01 already has its tiles in the scene, so `generateOnStart` is off there
+and the generator acts as the level's source of truth — PacStudent asks it which
+cells it may enter.  Turn `generateOnStart` on, or call `Generate()`, to build
+the maze from the prefabs in `Assets/Prefabs/Tiles/` instead.
+
+## The bonus item
+
+`CherryController.cs` spawns the bonus squid every five seconds at a random
+point on a circle outside whatever the camera can see, sends it in a straight
+line through the centre of the level, and destroys it once it has left the view
+on the far side.  The circle is measured from the camera at spawn time, so it
+stays off screen at either aspect ratio.
+
 ## Controls
 
-The title screen is driven by the Level 1 and Level 2 buttons.
+The title screen is driven by the Level 1 and Level 2 buttons.  In the level,
+WASD or the arrow keys steer PacStudent and Exit returns to the menu.
