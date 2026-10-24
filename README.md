@@ -122,6 +122,31 @@ quicker time does.
 Row 14 is the tunnel. `LevelGenerator.TryWrap` sends anything that steps off one
 end of a row that is open at both edges round to the other side.
 
+## The seals
+
+`GhostController.cs` decides one cell at a time from what is immediately next
+door, so there is no pathfinding anywhere. A seal never stops, never turns back
+on itself unless a dead end leaves it no choice, and never uses the tunnel —
+anything off the edge of the map is a wall to it.
+
+Each seal has its own way of choosing, set in the Inspector:
+
+| Seal | Behaviour |
+| --- | --- |
+| 1 Sky | takes whichever turn leads furthest from PacStudent |
+| 2 Cocoa | takes whichever turn leads closest to PacStudent |
+| 3 Snow | picks at random |
+| 4 Slate | bears right, so it works its way round clockwise |
+
+While frightened they all scatter at random instead, and more slowly: 3.5 cells
+a second normally, 2.5 while edible.
+
+The house has a gap top and bottom. Seals 1 and 3 use the top one, 2 and 4 the
+bottom, both on release and when they come back. The gap is one way: a seal can
+leave through it, and re-enter only when it has been eaten, so none of them can
+sit in the doorway instead of hunting. Once eaten, a seal heads straight back to
+its gap, walls and all, and is itself again when it arrives.
+
 ## The bonus item
 
 `CherryController.cs` spawns the bonus squid every five seconds at a random
