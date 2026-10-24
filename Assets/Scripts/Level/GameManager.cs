@@ -201,6 +201,8 @@ public class GameManager : MonoBehaviour
             pacStudent.Frozen = true;
         }
 
+        SetGhostsFrozen(true);
+
         if (hud != null)
         {
             hud.SetTimerRunning(false);
@@ -216,6 +218,8 @@ public class GameManager : MonoBehaviour
         {
             pacStudent.Frozen = false;
         }
+
+        SetGhostsFrozen(false);
 
         if (hud != null)
         {
@@ -340,10 +344,10 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (_scaredRemaining <= recoveringSeconds)
-        {
-            SetGhostStates(GhostState.Recovering);
-        }
+        // Set every frame, so a seal that respawned mid-scare rejoins the state.
+        SetGhostStates(_scaredRemaining <= recoveringSeconds
+                           ? GhostState.Recovering
+                           : GhostState.Scared);
 
         if (hud != null)
         {
@@ -439,6 +443,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void SetGhostsFrozen(bool frozen)
+    {
+        if (ghosts == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < ghosts.Length; i++)
+        {
+            if (ghosts[i] != null)
+            {
+                ghosts[i].Frozen = frozen;
+            }
+        }
+    }
+
     private void BeginDying()
     {
         _phase = Phase.Dying;
@@ -450,6 +470,8 @@ public class GameManager : MonoBehaviour
             hud.SetTimerRunning(false);
             hud.HideScared();
         }
+
+        SetGhostsFrozen(true);
 
         if (pacStudent != null)
         {
@@ -503,6 +525,8 @@ public class GameManager : MonoBehaviour
         {
             pacStudent.Frozen = true;
         }
+
+        SetGhostsFrozen(true);
 
         if (hud != null)
         {
