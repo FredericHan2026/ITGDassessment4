@@ -70694,13 +70694,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ghostNumber: 1
+  behaviour: 0
   startColumn: 12
   startRow: 14
+  respawnColumn: 13
+  respawnRow: 12
+  level: {fileID: 100034}
+  target: {fileID: 104974}
+  normalTilesPerSecond: 3.5
+  scaredTilesPerSecond: 2.5
+  deadUnitsPerSecond: 12
   animator: {fileID: 104998}
   spriteRenderer: {fileID: 104996}
-  normalAnimator: {fileID: 9100000, guid: c26249787611e8870edb43597564e5f3, type: 2}
-  scaredAnimator: {fileID: 9100000, guid: 778bd235a6f2372f76effd458af969ce, type: 2}
-  deadAnimator: {fileID: 9100000, guid: bbfdb29ea92a655a1901c950eee13063, type: 2}
   flashRate: 6
 --- !u!1 &105002
 GameObject:
@@ -70989,13 +70994,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ghostNumber: 2
+  behaviour: 1
   startColumn: 13
   startRow: 14
+  respawnColumn: 13
+  respawnRow: 16
+  level: {fileID: 100034}
+  target: {fileID: 104974}
+  normalTilesPerSecond: 3.5
+  scaredTilesPerSecond: 2.5
+  deadUnitsPerSecond: 12
   animator: {fileID: 105024}
   spriteRenderer: {fileID: 105022}
-  normalAnimator: {fileID: 9100000, guid: b133fb9b1ff1e1b222c3133f3226ff7b, type: 2}
-  scaredAnimator: {fileID: 9100000, guid: 778bd235a6f2372f76effd458af969ce, type: 2}
-  deadAnimator: {fileID: 9100000, guid: bbfdb29ea92a655a1901c950eee13063, type: 2}
   flashRate: 6
 --- !u!1 &105028
 GameObject:
@@ -71284,13 +71294,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ghostNumber: 3
+  behaviour: 2
   startColumn: 14
   startRow: 14
+  respawnColumn: 14
+  respawnRow: 12
+  level: {fileID: 100034}
+  target: {fileID: 104974}
+  normalTilesPerSecond: 3.5
+  scaredTilesPerSecond: 2.5
+  deadUnitsPerSecond: 12
   animator: {fileID: 105050}
   spriteRenderer: {fileID: 105048}
-  normalAnimator: {fileID: 9100000, guid: ae5ad98db92820764f2022512f33d889, type: 2}
-  scaredAnimator: {fileID: 9100000, guid: 778bd235a6f2372f76effd458af969ce, type: 2}
-  deadAnimator: {fileID: 9100000, guid: bbfdb29ea92a655a1901c950eee13063, type: 2}
   flashRate: 6
 --- !u!1 &105054
 GameObject:
@@ -71579,13 +71594,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ghostNumber: 4
+  behaviour: 3
   startColumn: 15
   startRow: 14
+  respawnColumn: 14
+  respawnRow: 16
+  level: {fileID: 100034}
+  target: {fileID: 104974}
+  normalTilesPerSecond: 3.5
+  scaredTilesPerSecond: 2.5
+  deadUnitsPerSecond: 12
   animator: {fileID: 105076}
   spriteRenderer: {fileID: 105074}
-  normalAnimator: {fileID: 9100000, guid: a7e71a4446211fc2f8efef38fb8d118b, type: 2}
-  scaredAnimator: {fileID: 9100000, guid: 778bd235a6f2372f76effd458af969ce, type: 2}
-  deadAnimator: {fileID: 9100000, guid: bbfdb29ea92a655a1901c950eee13063, type: 2}
   flashRate: 6
 --- !u!1 &105080
 GameObject:
