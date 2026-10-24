@@ -1,123 +1,343 @@
 using UnityEngine;
 
 /// <summary>
-/// Walks PacStudent (the penguin) clockwise around the top-left inner block of
-/// the level, for ever.
+/// Moves PacStudent one cell at a time with the lastInput / currentInput
+/// algorithm.
 ///
-/// The path is a list of grid cells; each leg is handed to the Tweener with a
-/// duration of distance / speed, so the penguin covers every leg at exactly the
-/// same constant speed.  Turns are instant - on reaching a corner the walk
-/// animation simply switches to the next direction's clip.
+/// lastInput remembers the most recent key the player pressed. currentInput is
+/// the direction actually being travelled. Every time a step finishes, lastInput
+/// gets first refusal: if the cell that way is clear it becomes the new
+/// currentInput, otherwise the old currentInput carries on. If neither is
+/// possible PacStudent stops and the wall clip loops.
+///
+/// Motion goes through <see cref="Tweener"/>, which interpolates from
+/// accumulated Time.deltaTime. There is no Rigidbody, no CharacterController,
+/// no Vector3.MoveTowards and no third party tweening anywhere in this path.
 /// </summary>
 [RequireComponent(typeof(Tweener))]
 public class PacStudentController : MonoBehaviour
 {
-    [Header("Movement")]
-    [Tooltip("Constant speed in world units per second.")]
-    [SerializeField] private float speed = 3f;
+    private static readonly Vector2Int Up = new Vector2Int(0, -1);
+    private static readonly Vector2Int Down = new Vector2Int(0, 1);
+    private static readonly Vector2Int Left = new Vector2Int(-1, 0);
+    private static readonly Vector2Int Right = new Vector2Int(1, 0);
 
-    [Tooltip("Path cells given as (x = column, y = row), walked in order and then looped.")]
-    [SerializeField] private Vector2Int[] pathCells =
-    {
-        new Vector2Int(1, 1),
-        new Vector2Int(6, 1),
-        new Vector2Int(6, 5),
-        new Vector2Int(1, 5)
-    };
+    [Header("Level")]
+    [SerializeField] private LevelGenerator level;
+
+    [Tooltip("Starting cell, as column then row, with row 0 at the top.")]
+    [SerializeField] private int startColumn = 1;
+    [SerializeField] private int startRow = 1;
+
+    [Header("Movement")]
+    [Tooltip("Cells crossed per second. One cell is one world unit.")]
+    [SerializeField] private float tilesPerSecond = 5f;
 
     [Header("Presentation")]
     [SerializeField] private Animator animator;
-    [SerializeField] private AudioSource movementAudio;
+    [SerializeField] private DustTrail dustTrail;
 
-    [Tooltip("Loops the walking sound for as long as PacStudent is moving.")]
-    [SerializeField] private bool playMovementAudio = true;
+    [Header("Round")]
+    [Tooltip("Told when PacStudent arrives on a new cell, so pickups register.")]
+    [SerializeField] private GameManager round;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource moveAudio;
+    [SerializeField] private AudioClip movingClip;
+    [SerializeField] private AudioClip wallClip;
 
     private Tweener _tweener;
-    private int _targetIndex;
-    private string _currentState;
+    private Vector2Int _cell;
+    private Vector2Int _lastInput;
+    private Vector2Int _currentInput;
+    private bool _blocked;
+    private bool _arrived = true;
+
+    /// <summary>While frozen PacStudent ignores input and starts no new steps.</summary>
+    public bool Frozen { get; set; }
+
+    /// <summary>Cell PacStudent currently occupies, as (column, row).</summary>
+    public Vector2Int Cell
+    {
+        get { return _cell; }
+    }
+
+    /// <summary>Direction being travelled, or zero when stopped.</summary>
+    public Vector2Int Direction
+    {
+        get { return _currentInput; }
+    }
 
     private void Awake()
     {
         _tweener = GetComponent<Tweener>();
+
         if (animator == null)
         {
             animator = GetComponent<Animator>();
-        }
-        if (movementAudio == null)
-        {
-            movementAudio = GetComponent<AudioSource>();
         }
     }
 
     private void Start()
     {
-        if (pathCells == null || pathCells.Length < 2)
+        ResetToStart();
+    }
+
+    /// <summary>Back to the starting cell, facing right and standing still.</summary>
+    public void ResetToStart()
+    {
+        _cell = new Vector2Int(startColumn, startRow);
+        transform.position = LevelGrid.CellToWorld(_cell);
+
+        _tweener.Clear();
+        _lastInput = Vector2Int.zero;
+        _currentInput = Vector2Int.zero;
+        _blocked = false;
+        _arrived = true;
+
+        Face(Right);
+        SetAnimating(false);
+        StopAudio();
+
+        if (dustTrail != null)
         {
-            enabled = false;
-            return;
+            dustTrail.Emitting = false;
+        }
+    }
+
+    /// <summary>Plays the death animation and stops taking input.</summary>
+    public void Die()
+    {
+        Frozen = true;
+        _tweener.Clear();
+        _currentInput = Vector2Int.zero;
+        _lastInput = Vector2Int.zero;
+        StopAudio();
+
+        if (dustTrail != null)
+        {
+            dustTrail.Emitting = false;
         }
 
-        transform.position = LevelGrid.CellToWorld(pathCells[0]);
-        _targetIndex = 0;
-
-        // The walking sound is the "moving but not eating a pellet" clip. It is
-        // wired up on the AudioSource either way; this switch decides whether it
-        // actually loops while PacStudent walks.
-        if (movementAudio != null)
+        if (animator != null)
         {
-            movementAudio.loop = true;
-            if (playMovementAudio && !movementAudio.isPlaying)
-            {
-                movementAudio.Play();
-            }
-            else if (!playMovementAudio && movementAudio.isPlaying)
-            {
-                movementAudio.Stop();
-            }
+            animator.speed = 1f;
+            animator.Play("Death");
         }
-
-        StartNextLeg();
     }
 
     private void Update()
     {
+        if (Frozen)
+        {
+            StopAudio();
+            return;
+        }
+
+        ReadInput();
+
         if (!_tweener.TweenExists)
         {
-            StartNextLeg();
+            if (!_arrived)
+            {
+                _arrived = true;
+
+                if (round != null)
+                {
+                    round.OnPacStudentArrived(_cell);
+                }
+            }
+
+            Step();
+        }
+
+        UpdateAudio();
+    }
+
+    private void ReadInput()
+    {
+        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            _lastInput = Up;
+        }
+        else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            _lastInput = Down;
+        }
+        else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            _lastInput = Left;
+        }
+        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            _lastInput = Right;
         }
     }
 
-    private void StartNextLeg()
+    /// <summary>Picks a direction and starts one cell of travel, if it can.</summary>
+    private void Step()
     {
-        Vector3 from = LevelGrid.CellToWorld(pathCells[_targetIndex]);
-        _targetIndex = (_targetIndex + 1) % pathCells.Length;
-        Vector3 to = LevelGrid.CellToWorld(pathCells[_targetIndex]);
+        if (_lastInput != Vector2Int.zero && CanEnter(_cell + _lastInput))
+        {
+            _currentInput = _lastInput;
+        }
 
-        PlayWalkAnimation(to - from);
+        if (_currentInput == Vector2Int.zero)
+        {
+            Halt();
+            return;
+        }
 
-        float distance = (to - from).magnitude;
-        _tweener.AddTween(transform, from, to, distance / Mathf.Max(0.0001f, speed));
+        // The tunnel row: stepping off one side puts him on the other.
+        Vector2Int next = _cell + _currentInput;
+        int wrapped;
+
+        if (level != null && level.TryWrap(next.y, next.x, out wrapped))
+        {
+            _cell = new Vector2Int(wrapped, next.y);
+            transform.position = LevelGrid.CellToWorld(_cell);
+            _arrived = true;
+        }
+
+        if (CanEnter(_cell + _currentInput))
+        {
+            Travel(_currentInput);
+            return;
+        }
+
+        Halt();
     }
 
-    /// <summary>Instant turn: swap straight to the clip for the new heading.</summary>
-    private void PlayWalkAnimation(Vector3 heading)
+    private void Travel(Vector2Int direction)
     {
-        string state;
-        if (Mathf.Abs(heading.x) >= Mathf.Abs(heading.y))
-        {
-            state = heading.x >= 0f ? "Right" : "Left";
-        }
-        else
-        {
-            state = heading.y >= 0f ? "Up" : "Down";
-        }
+        Vector2Int target = _cell + direction;
+        Vector3 from = LevelGrid.CellToWorld(_cell);
+        Vector3 to = LevelGrid.CellToWorld(target);
 
-        if (state == _currentState || animator == null)
+        float speed = Mathf.Max(0.01f, tilesPerSecond);
+        if (!_tweener.AddTween(transform, from, to, 1f / speed))
         {
             return;
         }
 
-        _currentState = state;
-        animator.Play(state, 0, 0f);
+        _cell = target;
+        _blocked = false;
+        _arrived = false;
+
+        Face(direction);
+        SetAnimating(true);
+
+        if (dustTrail != null)
+        {
+            dustTrail.Emitting = true;
+        }
+    }
+
+    private void Halt()
+    {
+        // Blocked only counts if the player actually wants to go somewhere.
+        _blocked = _lastInput != Vector2Int.zero || _currentInput != Vector2Int.zero;
+
+        SetAnimating(false);
+
+        if (dustTrail != null)
+        {
+            dustTrail.Emitting = false;
+        }
+    }
+
+    /// <summary>True when the cell is inside the level and is not a wall.</summary>
+    private bool CanEnter(Vector2Int cell)
+    {
+        if (level == null)
+        {
+            return false;
+        }
+
+        return level.IsWalkable(cell.y, cell.x);
+    }
+
+    private void Face(Vector2Int direction)
+    {
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (direction == Up)
+        {
+            animator.Play("Up");
+        }
+        else if (direction == Down)
+        {
+            animator.Play("Down");
+        }
+        else if (direction == Left)
+        {
+            animator.Play("Left");
+        }
+        else if (direction == Right)
+        {
+            animator.Play("Right");
+        }
+    }
+
+    /// <summary>The walk cycle runs while travelling and freezes when stopped.</summary>
+    private void SetAnimating(bool animating)
+    {
+        if (animator != null)
+        {
+            animator.speed = animating ? 1f : 0f;
+        }
+    }
+
+    private void StopAudio()
+    {
+        if (moveAudio != null && moveAudio.isPlaying)
+        {
+            moveAudio.Stop();
+        }
+    }
+
+    /// <summary>
+    /// One looping clip while travelling, a different one while held against a
+    /// wall, silence otherwise.
+    /// </summary>
+    private void UpdateAudio()
+    {
+        if (moveAudio == null)
+        {
+            return;
+        }
+
+        AudioClip wanted = null;
+
+        if (_tweener.TweenExists)
+        {
+            wanted = movingClip;
+        }
+        else if (_blocked)
+        {
+            wanted = wallClip;
+        }
+
+        if (wanted == null)
+        {
+            StopAudio();
+            return;
+        }
+
+        if (moveAudio.clip != wanted)
+        {
+            moveAudio.Stop();
+            moveAudio.clip = wanted;
+        }
+
+        moveAudio.loop = true;
+
+        if (!moveAudio.isPlaying)
+        {
+            moveAudio.Play();
+        }
     }
 }
