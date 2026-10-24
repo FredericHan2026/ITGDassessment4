@@ -89,6 +89,35 @@ public class CherryController : MonoBehaviour
         _active.Add(cherry);
     }
 
+    /// <summary>
+    /// Removes the first bonus item within reach of a point, and says whether it
+    /// found one. The round logic calls this with PacStudent's position.
+    /// </summary>
+    public bool TryEat(Vector3 position, float radius)
+    {
+        for (int i = _active.Count - 1; i >= 0; i--)
+        {
+            GameObject cherry = _active[i];
+
+            if (cherry == null)
+            {
+                _active.RemoveAt(i);
+                continue;
+            }
+
+            if (Vector3.Distance(cherry.transform.position, position) > radius)
+            {
+                continue;
+            }
+
+            Destroy(cherry);
+            _active.RemoveAt(i);
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>Radius of a circle that clears the camera's corner at any aspect.</summary>
     private float OffScreenRadius()
     {

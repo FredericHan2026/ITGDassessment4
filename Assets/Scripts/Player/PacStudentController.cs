@@ -37,6 +37,10 @@ public class PacStudentController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private DustTrail dustTrail;
 
+    [Header("Round")]
+    [Tooltip("Told when PacStudent arrives on a new cell, so pickups register.")]
+    [SerializeField] private GameManager round;
+
     [Header("Audio")]
     [SerializeField] private AudioSource moveAudio;
     [SerializeField] private AudioClip movingClip;
@@ -47,6 +51,10 @@ public class PacStudentController : MonoBehaviour
     private Vector2Int _lastInput;
     private Vector2Int _currentInput;
     private bool _blocked;
+    private bool _arrived = true;
+
+    /// <summary>While frozen PacStudent ignores input and starts no new steps.</summary>
+    public bool Frozen { get; set; }
 
     /// <summary>Cell PacStudent currently occupies, as (column, row).</summary>
     public Vector2Int Cell
@@ -72,12 +80,24 @@ public class PacStudentController : MonoBehaviour
 
     private void Start()
     {
+        ResetToStart();
+    }
+
+    /// <summary>Back to the starting cell, facing right and standing still.</summary>
+    public void ResetToStart()
+    {
         _cell = new Vector2Int(startColumn, startRow);
         transform.position = LevelGrid.CellToWorld(_cell);
 
-        // Facing right, standing still, waiting for the first key.
+        _tweener.Clear();
+        _lastInput = Vector2Int.zero;
+        _currentInput = Vector2Int.zero;
+        _blocked = false;
+        _arrived = true;
+
         Face(Right);
         SetAnimating(false);
+        StopAudio();
 
         if (dustTrail != null)
         {
@@ -85,12 +105,49 @@ public class PacStudentController : MonoBehaviour
         }
     }
 
+    /// <summary>Plays the death animation and stops taking input.</summary>
+    public void Die()
+    {
+        Frozen = true;
+        _tweener.Clear();
+        _currentInput = Vector2Int.zero;
+        _lastInput = Vector2Int.zero;
+        StopAudio();
+
+        if (dustTrail != null)
+        {
+            dustTrail.Emitting = false;
+        }
+
+        if (animator != null)
+        {
+            animator.speed = 1f;
+            animator.Play("Death");
+        }
+    }
+
     private void Update()
     {
+        if (Frozen)
+        {
+            StopAudio();
+            return;
+        }
+
         ReadInput();
 
         if (!_tweener.TweenExists)
         {
+            if (!_arrived)
+            {
+                _arrived = true;
+
+                if (round != null)
+                {
+                    round.OnPacStudentArrived(_cell);
+                }
+            }
+
             Step();
         }
 
@@ -125,7 +182,24 @@ public class PacStudentController : MonoBehaviour
             _currentInput = _lastInput;
         }
 
-        if (_currentInput != Vector2Int.zero && CanEnter(_cell + _currentInput))
+        if (_currentInput == Vector2Int.zero)
+        {
+            Halt();
+            return;
+        }
+
+        // The tunnel row: stepping off one side puts him on the other.
+        Vector2Int next = _cell + _currentInput;
+        int wrapped;
+
+        if (level != null && level.TryWrap(next.y, next.x, out wrapped))
+        {
+            _cell = new Vector2Int(wrapped, next.y);
+            transform.position = LevelGrid.CellToWorld(_cell);
+            _arrived = true;
+        }
+
+        if (CanEnter(_cell + _currentInput))
         {
             Travel(_currentInput);
             return;
@@ -148,6 +222,7 @@ public class PacStudentController : MonoBehaviour
 
         _cell = target;
         _blocked = false;
+        _arrived = false;
 
         Face(direction);
         SetAnimating(true);
@@ -216,6 +291,14 @@ public class PacStudentController : MonoBehaviour
         }
     }
 
+    private void StopAudio()
+    {
+        if (moveAudio != null && moveAudio.isPlaying)
+        {
+            moveAudio.Stop();
+        }
+    }
+
     /// <summary>
     /// One looping clip while travelling, a different one while held against a
     /// wall, silence otherwise.
@@ -240,11 +323,7 @@ public class PacStudentController : MonoBehaviour
 
         if (wanted == null)
         {
-            if (moveAudio.isPlaying)
-            {
-                moveAudio.Stop();
-            }
-
+            StopAudio();
             return;
         }
 
