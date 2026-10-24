@@ -32,6 +32,11 @@ public class HUDController : MonoBehaviour
     [Tooltip("Left off until the round logic takes over the clock.")]
     [SerializeField] private bool runTimer = false;
 
+    [Header("Centre message")]
+    [Tooltip("Used for the round countdown and the game over banner.")]
+    [SerializeField] private GameObject messageRoot;
+    [SerializeField] private Text messageText;
+
     [Header("Exit")]
     [SerializeField] private Button exitButton;
 
@@ -79,6 +84,34 @@ public class HUDController : MonoBehaviour
         SetLives(startingLives);
         SetTime(0f);
         HideScared();
+        HideMessage();
+    }
+
+    /// <summary>Big centred text, for the countdown and the game over banner.</summary>
+    public void ShowMessage(string message)
+    {
+        if (messageRoot != null)
+        {
+            messageRoot.SetActive(true);
+        }
+
+        if (messageText != null)
+        {
+            messageText.text = message;
+        }
+    }
+
+    public void HideMessage()
+    {
+        if (messageRoot != null)
+        {
+            messageRoot.SetActive(false);
+        }
+
+        if (messageText != null)
+        {
+            messageText.text = "";
+        }
     }
 
     private void Update()

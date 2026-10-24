@@ -98,6 +98,30 @@ and the generator acts as the level's source of truth — PacStudent asks it whi
 cells it may enter.  Turn `generateOnStart` on, or call `Generate()`, to build
 the maze from the prefabs in `Assets/Prefabs/Tiles/` instead.
 
+## Playing a round
+
+`GameManager.cs` runs the round: a three second countdown over the intro music,
+then the clock starts and PacStudent is unfrozen.
+
+Pickups are settled on the grid rather than through physics. PacStudent reports
+the cell he has just arrived on and the pellet sitting there, if any, is taken.
+At five cells a second that can never miss one, and it means the project needs
+no Rigidbody or collider anywhere. The two things that move freely — the seals
+and the bonus squid — are checked by distance instead.
+
+A pellet is 10, a power pellet 50, the bonus squid 100 and an edible seal 300.
+A power pellet makes the seals edible for ten seconds, with the last three spent
+flashing white as a warning, and the music follows the state. Running into a
+seal that is not edible costs a life and restarts the round; running out of
+lives, or clearing every pellet, ends it.
+
+At the end the run is written to `PlayerPrefs` under the same keys the title
+screen reads, keeping the better one: a higher score wins, and on a tie the
+quicker time does.
+
+Row 14 is the tunnel. `LevelGenerator.TryWrap` sends anything that steps off one
+end of a row that is open at both edges round to the other side.
+
 ## The bonus item
 
 `CherryController.cs` spawns the bonus squid every five seconds at a random
