@@ -154,6 +154,19 @@ public class PacStudentController : MonoBehaviour
         UpdateAudio();
     }
 
+    /// <summary>
+    /// Trigger contacts with pellets, seals and the bonus squid. The round also
+    /// settles pickups from the cell he lands on, and both routes funnel into
+    /// the same handler, so neither can double count.
+    /// </summary>
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (round != null && !Frozen)
+        {
+            round.OnPacStudentTouched(other);
+        }
+    }
+
     private void ReadInput()
     {
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))

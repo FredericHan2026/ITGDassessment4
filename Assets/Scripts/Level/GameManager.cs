@@ -132,6 +132,43 @@ public class GameManager : MonoBehaviour
     /// <summary>Called by PacStudent each time he finishes a step onto a cell.</summary>
     public void OnPacStudentArrived(Vector2Int cell)
     {
+        TryTakeAt(cell);
+    }
+
+    /// <summary>
+    /// Called from PacStudent's trigger contacts. Both this and the step-based
+    /// route end up in the same place, and taking a pickup removes it from the
+    /// table, so whichever gets there first wins and the other does nothing.
+    /// </summary>
+    public void OnPacStudentTouched(Collider2D other)
+    {
+        if (other == null || _phase != Phase.Playing)
+        {
+            return;
+        }
+
+        GhostController ghost = other.GetComponent<GhostController>();
+
+        if (ghost != null)
+        {
+            TouchGhost(ghost);
+            return;
+        }
+
+        if (other.GetComponent<BonusItem>() != null)
+        {
+            TakeCherry(other.gameObject);
+            return;
+        }
+
+        TryTakeAt(new Vector2Int(
+            Mathf.RoundToInt(other.transform.position.x),
+            Mathf.RoundToInt(-other.transform.position.y)));
+    }
+
+    /// <summary>Takes whatever pellet is on a cell. Safe to call twice.</summary>
+    private void TryTakeAt(Vector2Int cell)
+    {
         if (_phase != Phase.Playing)
         {
             return;
@@ -160,6 +197,10 @@ public class GameManager : MonoBehaviour
             }
 
             StartScared();
+        }
+        else
+        {
+            return;
         }
 
         if (_remainingPickups <= 0)
@@ -402,27 +443,45 @@ public class GameManager : MonoBehaviour
                 continue;
             }
 
-            if (ghost.IsEdible)
+            if (TouchGhost(ghost))
             {
-                ghost.SetState(GhostState.Dead);
-                AddScore(ghostScore);
+                return;
+            }
+        }
+    }
 
-                if (sfx != null)
-                {
-                    sfx.PlayEatGhost();
-                }
+    /// <summary>
+    /// Settles one contact with a seal. Returns true when it cost a life, which
+    /// ends the round for this frame. Safe to call twice: an eaten seal is
+    /// already dead and gets skipped.
+    /// </summary>
+    private bool TouchGhost(GhostController ghost)
+    {
+        if (ghost == null || ghost.State == GhostState.Dead || _phase != Phase.Playing)
+        {
+            return false;
+        }
 
-                if (music != null)
-                {
-                    music.PlayGhostDead();
-                }
+        if (ghost.IsEdible)
+        {
+            ghost.SetState(GhostState.Dead);
+            AddScore(ghostScore);
 
-                continue;
+            if (sfx != null)
+            {
+                sfx.PlayEatGhost();
             }
 
-            BeginDying();
-            return;
+            if (music != null)
+            {
+                music.PlayGhostDead();
+            }
+
+            return false;
         }
+
+        BeginDying();
+        return true;
     }
 
     private void CheckCherry()
@@ -434,12 +493,26 @@ public class GameManager : MonoBehaviour
 
         if (cherries.TryEat(pacStudent.transform.position, contactRadius))
         {
-            AddScore(cherryScore);
+            ScoreCherry();
+        }
+    }
 
-            if (sfx != null)
-            {
-                sfx.PlayEatCherry();
-            }
+    /// <summary>Takes one bonus item by object, for the trigger route.</summary>
+    private void TakeCherry(GameObject cherry)
+    {
+        if (cherries != null && cherries.TryEat(cherry))
+        {
+            ScoreCherry();
+        }
+    }
+
+    private void ScoreCherry()
+    {
+        AddScore(cherryScore);
+
+        if (sfx != null)
+        {
+            sfx.PlayEatCherry();
         }
     }
 
