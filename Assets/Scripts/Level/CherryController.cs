@@ -118,6 +118,26 @@ public class CherryController : MonoBehaviour
         return false;
     }
 
+    /// <summary>Takes one specific bonus item, if it is still ours. Safe twice.</summary>
+    public bool TryEat(GameObject cherry)
+    {
+        if (cherry == null)
+        {
+            return false;
+        }
+
+        int index = _active.IndexOf(cherry);
+
+        if (index < 0)
+        {
+            return false;
+        }
+
+        _active.RemoveAt(index);
+        Destroy(cherry);
+        return true;
+    }
+
     /// <summary>Radius of a circle that clears the camera's corner at any aspect.</summary>
     private float OffScreenRadius()
     {

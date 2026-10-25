@@ -1,150 +1,164 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// A puff of snow kicked up behind PacStudent while it is moving.
+/// The snow PacStudent kicks up while he is moving.
 ///
-/// Written as a pool of small sprites rather than a Unity ParticleSystem so the
-/// whole effect is plain, readable code with nothing to tune outside the
-/// Inspector fields below. Each puff fades out and shrinks over its lifetime.
+/// This drives a real <see cref="ParticleSystem"/>. Drop a Particle System onto
+/// PacStudent and assign it below to tune it in the Inspector; leave it empty
+/// and one is built and configured here at startup instead, so the effect works
+/// out of the box either way.
+///
+/// The particle material is copied from the sprite material already in the
+/// scene rather than looked up by shader name, so there is nothing to go
+/// missing in a build.
 /// </summary>
 public class DustTrail : MonoBehaviour
 {
-    private class Puff
-    {
-        public GameObject Root;
-        public SpriteRenderer Renderer;
-        public float Age;
-        public float Drift;
-    }
+    [Header("System")]
+    [Tooltip("Optional. Leave empty and one is created and configured at start.")]
+    [SerializeField] private ParticleSystem particles;
 
     [Header("Look")]
     [SerializeField] private Sprite puffSprite;
     [SerializeField] private Color tint = new Color(0.88f, 0.96f, 1f, 0.9f);
     [SerializeField] private int sortingOrder = 15;
 
-    [Tooltip("Where puffs are parked. Must NOT be a child of PacStudent, or the "
-             + "puffs travel along with him instead of being left behind.")]
-    [SerializeField] private Transform puffParent;
-
-    [Header("Timing")]
-    [Tooltip("Seconds between puffs while emitting.")]
-    [SerializeField] private float interval = 0.05f;
-
-    [Tooltip("How long each puff lasts.")]
-    [SerializeField] private float lifetime = 0.6f;
-
-    [Header("Size")]
-    [SerializeField] private float startScale = 0.55f;
-    [SerializeField] private float endScale = 0.12f;
-    [SerializeField] private float rise = 0.35f;
-
-    [Tooltip("Where the puff leaves from, relative to PacStudent. Down a little "
-             + "so it looks kicked up from his feet.")]
+    [Tooltip("Where the puffs leave from, relative to PacStudent. Down a little "
+             + "so they look kicked up from his feet.")]
     [SerializeField] private Vector2 offset = new Vector2(0f, -0.28f);
 
-    private readonly List<Puff> _live = new List<Puff>();
-    private float _sinceLast;
+    [Header("Behaviour")]
+    [Tooltip("Puffs emitted per second while moving.")]
+    [SerializeField] private float rate = 20f;
 
-    /// <summary>Turned on while PacStudent is travelling.</summary>
-    public bool Emitting { get; set; }
+    [SerializeField] private float lifetime = 0.6f;
+    [SerializeField] private float size = 0.55f;
 
-    private void Update()
+    [Tooltip("How fast a puff drifts away from his feet.")]
+    [SerializeField] private float speed = 0.5f;
+
+    [Tooltip("Spread of the puffs around the emission point.")]
+    [SerializeField] private float spread = 0.12f;
+
+    private bool _emitting;
+
+    /// <summary>Turned on by the controller while PacStudent is travelling.</summary>
+    public bool Emitting
     {
-        if (Emitting && puffSprite != null)
+        get { return _emitting; }
+        set
         {
-            _sinceLast += Time.deltaTime;
-
-            if (_sinceLast >= interval)
+            if (_emitting == value)
             {
-                _sinceLast = 0f;
-                Spawn();
+                return;
             }
-        }
-        else
-        {
-            _sinceLast = interval;
-        }
 
-        Age();
+            _emitting = value;
+            Apply();
+        }
     }
 
-    private void Spawn()
+    private void Awake()
     {
-        GameObject go = new GameObject("Puff");
-
-        // Deliberately not parented to this transform: a puff has to stay where
-        // it was dropped while PacStudent keeps going.
-        if (puffParent != null)
+        if (particles == null)
         {
-            go.transform.SetParent(puffParent, false);
+            particles = Build();
         }
 
-        go.transform.position = transform.position + new Vector3(offset.x, offset.y, 0f);
-
-        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = puffSprite;
-        sr.color = tint;
-        sr.sortingOrder = sortingOrder;
-
-        Puff puff = new Puff();
-        puff.Root = go;
-        puff.Renderer = sr;
-        puff.Age = 0f;
-        puff.Drift = Random.Range(-0.25f, 0.25f);
-        _live.Add(puff);
+        Configure();
+        Apply();
     }
 
-    /// <summary>Fades, shrinks and drifts every live puff, retiring the old ones.</summary>
-    private void Age()
+    /// <summary>Makes the particle system when none was assigned in the editor.</summary>
+    private ParticleSystem Build()
     {
-        float span = Mathf.Max(0.01f, lifetime);
+        GameObject go = new GameObject("DustParticles");
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = new Vector3(offset.x, offset.y, 0f);
+        return go.AddComponent<ParticleSystem>();
+    }
 
-        for (int i = _live.Count - 1; i >= 0; i--)
+    private void Configure()
+    {
+        if (particles == null)
         {
-            Puff puff = _live[i];
-
-            if (puff.Root == null)
-            {
-                _live.RemoveAt(i);
-                continue;
-            }
-
-            puff.Age += Time.deltaTime;
-            float t = Mathf.Clamp01(puff.Age / span);
-
-            if (t >= 1f)
-            {
-                Destroy(puff.Root);
-                _live.RemoveAt(i);
-                continue;
-            }
-
-            float scale = Mathf.Lerp(startScale, endScale, t);
-            puff.Root.transform.localScale = new Vector3(scale, scale, 1f);
-
-            Vector3 p = puff.Root.transform.position;
-            puff.Root.transform.position = new Vector3(
-                p.x + puff.Drift * Time.deltaTime,
-                p.y + rise * Time.deltaTime,
-                p.z);
-
-            Color c = tint;
-            c.a = tint.a * (1f - t);
-            puff.Renderer.color = c;
+            return;
         }
+
+        ParticleSystem.MainModule main = particles.main;
+        main.startLifetime = lifetime;
+        main.startSpeed = speed;
+        main.startSize = size;
+        main.startColor = tint;
+        main.gravityModifier = 0f;
+        main.maxParticles = 120;
+        main.loop = true;
+        main.playOnAwake = false;
+
+        // World space, so a puff stays where it was dropped while he keeps going.
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+        ParticleSystem.ShapeModule shape = particles.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Sphere;
+        shape.radius = Mathf.Max(0.01f, spread);
+
+        ParticleSystem.EmissionModule emission = particles.emission;
+        emission.rateOverTime = rate;
+        emission.enabled = false;
+
+        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+
+        if (renderer != null)
+        {
+            renderer.sortingOrder = sortingOrder;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+
+            Material material = BuildMaterial();
+
+            if (material != null)
+            {
+                renderer.material = material;
+            }
+        }
+
+        particles.Play();
+    }
+
+    /// <summary>
+    /// Copies the sprite material already used in this scene and puts the puff
+    /// texture on it, rather than hunting for a shader by name.
+    /// </summary>
+    private Material BuildMaterial()
+    {
+        if (puffSprite == null)
+        {
+            return null;
+        }
+
+        SpriteRenderer source = GetComponent<SpriteRenderer>();
+        Material template = source != null ? source.sharedMaterial : null;
+        Material material = template != null
+            ? new Material(template)
+            : new Material(Shader.Find("Sprites/Default"));
+
+        material.mainTexture = puffSprite.texture;
+        return material;
+    }
+
+    private void Apply()
+    {
+        if (particles == null)
+        {
+            return;
+        }
+
+        ParticleSystem.EmissionModule emission = particles.emission;
+        emission.enabled = _emitting;
     }
 
     private void OnDisable()
     {
-        for (int i = 0; i < _live.Count; i++)
-        {
-            if (_live[i].Root != null)
-            {
-                Destroy(_live[i].Root);
-            }
-        }
-
-        _live.Clear();
+        Emitting = false;
     }
 }

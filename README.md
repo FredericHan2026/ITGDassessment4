@@ -83,8 +83,13 @@ that way is blocked the old currentInput carries on.  If neither is possible
 PacStudent stops and the wall clip loops instead of the walking clip.  Speed is
 5 cells a second.
 
-`DustTrail.cs` kicks up a small snow puff behind PacStudent while it is moving.
-Each puff is a sprite that fades, shrinks and drifts over its lifetime.
+`DustTrail.cs` drives a `ParticleSystem` that kicks up snow behind PacStudent
+while he is moving. Drop a Particle System onto him and assign it to tune the
+effect in the Inspector; leave the field empty and one is built and configured
+at startup instead. The particle material is copied from the sprite material
+already in the scene rather than looked up by shader name, so there is nothing
+to go missing. The particles simulate in world space, so a puff stays where it
+was dropped while he carries on.
 
 ## The level generator
 
@@ -103,11 +108,19 @@ the maze from the prefabs in `Assets/Prefabs/Tiles/` instead.
 `GameManager.cs` runs the round: a three second countdown over the intro music,
 then the clock starts and PacStudent is unfrozen.
 
-Pickups are settled on the grid rather than through physics. PacStudent reports
-the cell he has just arrived on and the pellet sitting there, if any, is taken.
-At five cells a second that can never miss one, and it means the project needs
-no Rigidbody or collider anywhere. The two things that move freely — the seals
-and the bonus squid — are checked by distance instead.
+Pellets, power pellets, the seals and the bonus squid all carry a trigger
+collider, and PacStudent carries the project's only `Rigidbody2D`. It is
+Kinematic, has no gravity and is never driven by physics; it is there purely so
+trigger contacts get reported, with Use Full Kinematic Contacts on so static
+triggers register too.
+
+Contacts and the grid both lead to the same place. PacStudent also reports the
+cell he arrives on, and taking a pickup removes it from the table, so whichever
+route gets there first wins and the other does nothing. That means a pickup can
+never be scored twice, and at five cells a second it can never be missed either.
+
+Walls and the tunnel stay on the grid, where they belong: they are rules about
+where PacStudent may move rather than things he bumps into.
 
 A pellet is 10, a power pellet 50, the bonus squid 100 and an edible seal 300.
 A power pellet makes the seals edible for ten seconds, with the last three spent
