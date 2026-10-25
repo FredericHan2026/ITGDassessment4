@@ -81894,10 +81894,10 @@ MonoBehaviour:
   level: {fileID: 100034}
   cherries: {fileID: 100044}
   ghosts:
-  - {fileID: 105468}
-  - {fileID: 105496}
-  - {fileID: 105524}
-  - {fileID: 105552}
+  - {fileID: 105470}
+  - {fileID: 105498}
+  - {fileID: 105526}
+  - {fileID: 105554}
   pelletParent: {fileID: 103546}
   powerPelletParent: {fileID: 105390}
   music: {fileID: 100020}
