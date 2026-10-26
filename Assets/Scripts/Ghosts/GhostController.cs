@@ -74,14 +74,23 @@ public class GhostController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private SpriteRenderer spriteRenderer;
 
+    [Tooltip("Colour a frightened seal is tinted. The artwork underneath is "
+             + "flat grey so this shows through cleanly.")]
+    [SerializeField] private Color scaredTint = new Color(1f, 0.38f, 0.68f, 1f);
+
     [Tooltip("Flashes per second while recovering.")]
     [SerializeField] private float flashRate = 6f;
+
+    [Header("Pen")]
+    [Tooltip("How long it sits in the pen after being eaten before heading out.")]
+    [SerializeField] private float penPauseSeconds = 1f;
 
     private Tweener _tweener;
     private GhostState _state = GhostState.Normal;
     private Vector2Int _cell;
     private Vector2Int _direction = Vector2Int.zero;
     private bool _leaving;
+    private float _hold;
 
     /// <summary>While frozen the seal holds still, for the round countdown.</summary>
     public bool Frozen { get; set; }
@@ -134,6 +143,14 @@ public class GhostController : MonoBehaviour
         if (_state == GhostState.Dead)
         {
             TickDead();
+            return;
+        }
+
+        // Sitting in the pen for a beat after being eaten, so it does not pop
+        // straight back out of the doorway it arrived at.
+        if (_hold > 0f)
+        {
+            _hold -= Time.deltaTime;
             return;
         }
 
@@ -334,12 +351,12 @@ public class GhostController : MonoBehaviour
 
     // ---------------------------------------------------------------- dead
 
-    /// <summary>Straight back to the gap it belongs to, walls and all.</summary>
+    /// <summary>Straight back to its place inside the pen, walls and all.</summary>
     private void BeginDeadTrip()
     {
         _tweener.Clear();
 
-        Vector2Int home = new Vector2Int(respawnColumn, respawnRow);
+        Vector2Int home = new Vector2Int(startColumn, startRow);
         Vector3 from = transform.position;
         Vector3 to = LevelGrid.CellToWorld(home);
         float distance = (to - from).magnitude;
@@ -369,14 +386,16 @@ public class GhostController : MonoBehaviour
 
     private void ArriveHome()
     {
-        _cell = Gap;
+        _cell = new Vector2Int(startColumn, startRow);
         transform.position = LevelGrid.CellToWorld(_cell);
 
-        // Facing out, and still counted as leaving until it is clear of the
-        // doorway. Without this it can step back into the pen, and the one-way
-        // gap then leaves it stuck in there for the rest of the round.
-        _direction = Outward;
+        // Back where it started inside the pen, waits a moment, then walks out
+        // through its own gap under the leaving rule, exactly as at the start of
+        // a round. Leaving has to stay on until it is clear of the doorway: the
+        // gap is one way, so a seal that steps back inside is stuck there.
+        _direction = Vector2Int.zero;
         _leaving = true;
+        _hold = penPauseSeconds;
         SetState(GhostState.Normal);
     }
 
@@ -427,9 +446,13 @@ public class GhostController : MonoBehaviour
 
         if (_state == GhostState.Recovering)
         {
-            // Alternate between the scared colours and white as a warning.
+            // Flashes between the scared pink and white as the warning.
             bool bright = Mathf.PingPong(Time.time * flashRate, 1f) > 0.5f;
-            spriteRenderer.color = bright ? Color.white : new Color(0.65f, 0.8f, 1f, 1f);
+            spriteRenderer.color = bright ? Color.white : scaredTint;
+        }
+        else if (_state == GhostState.Scared)
+        {
+            spriteRenderer.color = scaredTint;
         }
         else
         {
@@ -466,6 +489,7 @@ public class GhostController : MonoBehaviour
         _direction = Vector2Int.zero;
         _state = GhostState.Normal;
         _leaving = true;
+        _hold = 0f;
 
         if (spriteRenderer != null)
         {
