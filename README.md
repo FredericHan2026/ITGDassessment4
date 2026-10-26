@@ -152,13 +152,16 @@ Each seal has its own way of choosing, set in the Inspector:
 | 4 Slate | bears right, so it works its way round clockwise |
 
 While frightened they all scatter at random instead, and more slowly: 3.5 cells
-a second normally, 2.5 while edible.
+a second normally, 2.5 while edible. A frightened seal is tinted pink, and the
+artwork underneath is deliberately flat grey so the tint reads cleanly and the
+recovery warning can flash between that pink and white.
 
 The house has a gap top and bottom. Seals 1 and 3 use the top one, 2 and 4 the
 bottom, both on release and when they come back. The gap is one way: a seal can
 leave through it, and re-enter only when it has been eaten, so none of them can
-sit in the doorway instead of hunting. Once eaten, a seal heads straight back to
-its gap, walls and all, and is itself again when it arrives.
+sit in the doorway instead of hunting. Once eaten, a seal heads straight back
+into the pen, walls and all, sits there for a second, and then walks out through
+its own gap the same way it does at the start of a round.
 
 ## The bonus item
 
