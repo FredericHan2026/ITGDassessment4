@@ -168,7 +168,7 @@ public class GhostController : MonoBehaviour
         _direction = chosen;
         Face(chosen);
 
-        if (_leaving && _cell == Gap)
+        if (_leaving && _cell == ExitCell)
         {
             _leaving = false;
         }
@@ -178,6 +178,22 @@ public class GhostController : MonoBehaviour
     private Vector2Int Gap
     {
         get { return new Vector2Int(respawnColumn, respawnRow); }
+    }
+
+    /// <summary>Which way is out: up through a gap above the pen, down below it.</summary>
+    private Vector2Int Outward
+    {
+        get { return respawnRow < startRow ? Up : Down; }
+    }
+
+    /// <summary>
+    /// The first cell properly outside the house. Heading for the gap itself is
+    /// not enough: standing in the doorway, every direction looks equally good
+    /// and the seal can turn straight back in.
+    /// </summary>
+    private Vector2Int ExitCell
+    {
+        get { return Gap + Outward; }
     }
 
     /// <summary>
@@ -231,7 +247,7 @@ public class GhostController : MonoBehaviour
         // Right-hand following would otherwise circle the open pen forever.
         if (_leaving)
         {
-            return -Manhattan(_cell + dir, Gap);
+            return -Manhattan(_cell + dir, ExitCell);
         }
 
         // A frightened seal stops hunting and just scatters.
@@ -355,8 +371,12 @@ public class GhostController : MonoBehaviour
     {
         _cell = Gap;
         transform.position = LevelGrid.CellToWorld(_cell);
-        _direction = Vector2Int.zero;
-        _leaving = false;          // it reappears at the gap, already outside
+
+        // Facing out, and still counted as leaving until it is clear of the
+        // doorway. Without this it can step back into the pen, and the one-way
+        // gap then leaves it stuck in there for the rest of the round.
+        _direction = Outward;
+        _leaving = true;
         SetState(GhostState.Normal);
     }
 
