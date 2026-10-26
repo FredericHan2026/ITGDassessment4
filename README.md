@@ -152,9 +152,16 @@ Each seal has its own way of choosing, set in the Inspector:
 | 4 Slate | bears right, so it works its way round clockwise |
 
 While frightened they all scatter at random instead, and more slowly: 3.5 cells
-a second normally, 2.5 while edible. A frightened seal is tinted pink, and the
-artwork underneath is deliberately flat grey so the tint reads cleanly and the
-recovery warning can flash between that pink and white.
+a second normally, 2.5 while edible.
+
+Each seal has its own frightened sprites, so Cocoa keeps its spots and Snow its
+bow rather than all four turning into the same shape. The artwork is flattened
+to grey and normalised so every seal's body lands on the same brightness,
+whatever colour it started as, and GhostController multiplies one pink over all
+of them: four recognisable seals, one tone of pink. Frightened, they pulse
+gently between two pinks; in the last seconds they flash hard between pink and
+white, which is only possible because a colour tint can darken but never
+brighten, so the art underneath has to be pale.
 
 The house has a gap top and bottom. Seals 1 and 3 use the top one, 2 and 4 the
 bottom, both on release and when they come back. The gap is one way: a seal can

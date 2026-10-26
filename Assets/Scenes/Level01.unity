@@ -78760,7 +78760,9 @@ MonoBehaviour:
   deadUnitsPerSecond: 12
   animator: {fileID: 105442}
   spriteRenderer: {fileID: 105440}
-  scaredTint: {r: 1, g: 0.38, b: 0.68, a: 1}
+  scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
+  scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  pulseRate: 2
   flashRate: 6
   penPauseSeconds: 1
 --- !u!1 &105448
@@ -79130,7 +79132,9 @@ MonoBehaviour:
   deadUnitsPerSecond: 12
   animator: {fileID: 105474}
   spriteRenderer: {fileID: 105472}
-  scaredTint: {r: 1, g: 0.38, b: 0.68, a: 1}
+  scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
+  scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  pulseRate: 2
   flashRate: 6
   penPauseSeconds: 1
 --- !u!1 &105480
@@ -79500,7 +79504,9 @@ MonoBehaviour:
   deadUnitsPerSecond: 12
   animator: {fileID: 105506}
   spriteRenderer: {fileID: 105504}
-  scaredTint: {r: 1, g: 0.38, b: 0.68, a: 1}
+  scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
+  scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  pulseRate: 2
   flashRate: 6
   penPauseSeconds: 1
 --- !u!1 &105512
@@ -79870,7 +79876,9 @@ MonoBehaviour:
   deadUnitsPerSecond: 12
   animator: {fileID: 105538}
   spriteRenderer: {fileID: 105536}
-  scaredTint: {r: 1, g: 0.38, b: 0.68, a: 1}
+  scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
+  scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  pulseRate: 2
   flashRate: 6
   penPauseSeconds: 1
 --- !u!1 &105544
