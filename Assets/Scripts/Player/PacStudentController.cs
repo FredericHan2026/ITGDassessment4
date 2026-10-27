@@ -43,15 +43,28 @@ public class PacStudentController : MonoBehaviour
 
     [Header("Audio")]
     [SerializeField] private AudioSource moveAudio;
+
+    [Tooltip("Loops while moving into a cell with no pellet in it.")]
     [SerializeField] private AudioClip movingClip;
+
+    [Tooltip("Loops while moving into a cell that has a pellet to eat.")]
+    [SerializeField] private AudioClip eatingClip;
+
+    [Tooltip("Fired once, on the first frame of walking into a wall.")]
     [SerializeField] private AudioClip wallClip;
+
+    [Header("Bump")]
+    [Tooltip("Puff played from the point of contact when he hits a wall.")]
+    [SerializeField] private BurstParticles wallBump;
 
     private Tweener _tweener;
     private Vector2Int _cell;
-    private Vector2Int _lastInput;
-    private Vector2Int _currentInput;
+    private Vector2Int lastInput;
+    private Vector2Int currentInput;
     private bool _blocked;
+    private bool _wasBlocked;
     private bool _arrived = true;
+    private bool _eatingNext;
 
     /// <summary>While frozen PacStudent ignores input and starts no new steps.</summary>
     public bool Frozen { get; set; }
@@ -65,7 +78,7 @@ public class PacStudentController : MonoBehaviour
     /// <summary>Direction being travelled, or zero when stopped.</summary>
     public Vector2Int Direction
     {
-        get { return _currentInput; }
+        get { return currentInput; }
     }
 
     private void Awake()
@@ -90,9 +103,11 @@ public class PacStudentController : MonoBehaviour
         transform.position = LevelGrid.CellToWorld(_cell);
 
         _tweener.Clear();
-        _lastInput = Vector2Int.zero;
-        _currentInput = Vector2Int.zero;
+        lastInput = Vector2Int.zero;
+        currentInput = Vector2Int.zero;
         _blocked = false;
+        _wasBlocked = false;
+        _eatingNext = false;
         _arrived = true;
 
         Face(Right);
@@ -110,8 +125,8 @@ public class PacStudentController : MonoBehaviour
     {
         Frozen = true;
         _tweener.Clear();
-        _currentInput = Vector2Int.zero;
-        _lastInput = Vector2Int.zero;
+        currentInput = Vector2Int.zero;
+        lastInput = Vector2Int.zero;
         StopAudio();
 
         if (dustTrail != null)
@@ -135,6 +150,7 @@ public class PacStudentController : MonoBehaviour
         }
 
         ReadInput();
+        _wasBlocked = _blocked;
 
         if (!_tweener.TweenExists)
         {
@@ -171,38 +187,38 @@ public class PacStudentController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
-            _lastInput = Up;
+            lastInput = Up;
         }
         else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
         {
-            _lastInput = Down;
+            lastInput = Down;
         }
         else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
-            _lastInput = Left;
+            lastInput = Left;
         }
         else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
         {
-            _lastInput = Right;
+            lastInput = Right;
         }
     }
 
     /// <summary>Picks a direction and starts one cell of travel, if it can.</summary>
     private void Step()
     {
-        if (_lastInput != Vector2Int.zero && CanEnter(_cell + _lastInput))
+        if (lastInput != Vector2Int.zero && CanEnter(_cell + lastInput))
         {
-            _currentInput = _lastInput;
+            currentInput = lastInput;
         }
 
-        if (_currentInput == Vector2Int.zero)
+        if (currentInput == Vector2Int.zero)
         {
             Halt();
             return;
         }
 
         // The tunnel row: stepping off one side puts him on the other.
-        Vector2Int next = _cell + _currentInput;
+        Vector2Int next = _cell + currentInput;
         int wrapped;
 
         if (level != null && level.TryWrap(next.y, next.x, out wrapped))
@@ -212,9 +228,9 @@ public class PacStudentController : MonoBehaviour
             _arrived = true;
         }
 
-        if (CanEnter(_cell + _currentInput))
+        if (CanEnter(_cell + currentInput))
         {
-            Travel(_currentInput);
+            Travel(currentInput);
             return;
         }
 
@@ -237,6 +253,9 @@ public class PacStudentController : MonoBehaviour
         _blocked = false;
         _arrived = false;
 
+        // Which of the two movement clips belongs to this step.
+        _eatingNext = round != null && round.HasPelletAt(target);
+
         Face(direction);
         SetAnimating(true);
 
@@ -249,13 +268,39 @@ public class PacStudentController : MonoBehaviour
     private void Halt()
     {
         // Blocked only counts if the player actually wants to go somewhere.
-        _blocked = _lastInput != Vector2Int.zero || _currentInput != Vector2Int.zero;
+        _blocked = lastInput != Vector2Int.zero || currentInput != Vector2Int.zero;
+
+        // The sound and the puff belong to the first frame of the contact, not
+        // to every frame he spends held against the wall.
+        if (_blocked && !_wasBlocked)
+        {
+            Bump();
+        }
 
         SetAnimating(false);
 
         if (dustTrail != null)
         {
             dustTrail.Emitting = false;
+        }
+    }
+
+    /// <summary>The wall he is pressed against, one frame after contact.</summary>
+    private void Bump()
+    {
+        Vector2Int into = currentInput != Vector2Int.zero ? currentInput : lastInput;
+
+        if (moveAudio != null && wallClip != null)
+        {
+            moveAudio.PlayOneShot(wallClip);
+        }
+
+        if (wallBump != null)
+        {
+            // Half a cell along, so the puff lands on the wall face itself.
+            Vector3 contact = transform.position
+                              + new Vector3(into.x * 0.5f, -into.y * 0.5f, 0f);
+            wallBump.Burst(contact);
         }
     }
 
@@ -323,15 +368,13 @@ public class PacStudentController : MonoBehaviour
             return;
         }
 
+        // Two movement loops: one for eating his way along, one for empty
+        // corridor. The wall sound is a one-shot and is not handled here.
         AudioClip wanted = null;
 
         if (_tweener.TweenExists)
         {
-            wanted = movingClip;
-        }
-        else if (_blocked)
-        {
-            wanted = wallClip;
+            wanted = _eatingNext && eatingClip != null ? eatingClip : movingClip;
         }
 
         if (wanted == null)
