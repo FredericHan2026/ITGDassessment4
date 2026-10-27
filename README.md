@@ -83,6 +83,12 @@ that way is blocked the old currentInput carries on.  If neither is possible
 PacStudent stops and the wall clip loops instead of the walking clip.  Speed is
 5 cells a second.
 
+There are two movement loops, as the brief asks: one for stepping into a cell
+that still holds a pellet and one for stepping into empty corridor. PacStudent
+asks the round what is in the next cell before each step and picks accordingly.
+Walking into a wall is separate again: a one-shot sound and a puff of snow from
+the point of contact, both on the first frame only.
+
 `DustTrail.cs` drives a `ParticleSystem` that kicks up snow behind PacStudent
 while he is moving. Drop a Particle System onto him and assign it to tune the
 effect in the Inspector; leave the field empty and one is built and configured
@@ -171,7 +177,8 @@ the last one on its way home, the music goes back to matching that state.
 
 ## The bonus item
 
-`CherryController.cs` spawns the bonus squid every five seconds at a random
+`CherryController.cs` spawns the bonus squid five seconds after the last one was
+destroyed, so there is only ever one on screen, at a random
 point on a circle outside whatever the camera can see, sends it in a straight
 line through the centre of the level, and destroys it once it has left the view
 on the far side.  The circle is measured from the camera at spawn time, so it
