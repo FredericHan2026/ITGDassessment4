@@ -75,10 +75,17 @@ public class GhostController : MonoBehaviour
     [SerializeField] private SpriteRenderer spriteRenderer;
 
     [Tooltip("Colour a frightened seal is tinted. The artwork underneath is "
-             + "flat grey so this shows through cleanly.")]
-    [SerializeField] private Color scaredTint = new Color(1f, 0.38f, 0.68f, 1f);
+             + "flat grey, and every seal's is normalised to the same "
+             + "brightness, so all four come out the same tone of pink.")]
+    [SerializeField] private Color scaredTint = new Color(1f, 0.58f, 0.80f, 1f);
 
-    [Tooltip("Flashes per second while recovering.")]
+    [Tooltip("The lighter end of the pulse while frightened.")]
+    [SerializeField] private Color scaredPulseTint = new Color(1f, 0.82f, 0.92f, 1f);
+
+    [Tooltip("Pulses per second while frightened. Slow and soft.")]
+    [SerializeField] private float pulseRate = 2f;
+
+    [Tooltip("Flashes per second while recovering. Fast and hard.")]
     [SerializeField] private float flashRate = 6f;
 
     [Header("Pen")]
@@ -446,13 +453,16 @@ public class GhostController : MonoBehaviour
 
         if (_state == GhostState.Recovering)
         {
-            // Flashes between the scared pink and white as the warning.
+            // Hard flash between pink and white: the power pellet is nearly out.
             bool bright = Mathf.PingPong(Time.time * flashRate, 1f) > 0.5f;
             spriteRenderer.color = bright ? Color.white : scaredTint;
         }
         else if (_state == GhostState.Scared)
         {
-            spriteRenderer.color = scaredTint;
+            // Soft pulse between the two pinks, so it reads as alive rather
+            // than as a flat recolour, without being mistaken for the warning.
+            float t = Mathf.PingPong(Time.time * pulseRate, 1f);
+            spriteRenderer.color = Color.Lerp(scaredTint, scaredPulseTint, t);
         }
         else
         {
