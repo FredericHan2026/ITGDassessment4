@@ -22,6 +22,11 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip ghostScaredMusic;
     [SerializeField] private AudioClip ghostDeadMusic;
 
+    [Tooltip("Off when the round drives the music, which is the case in a level: "
+             + "the intro then starts and stops with the countdown instead of "
+             + "handing over on a timer of its own.")]
+    [SerializeField] private bool playOnStart = true;
+
     [Header("Timing")]
     [Tooltip("Hand over to the looping music after at most this many seconds.")]
     [SerializeField] private float maxIntroSeconds = 3f;
@@ -39,7 +44,7 @@ public class AudioManager : MonoBehaviour
 
     private void Start()
     {
-        if (musicSource == null)
+        if (musicSource == null || !playOnStart)
         {
             return;
         }
@@ -78,6 +83,24 @@ public class AudioManager : MonoBehaviour
 
         _waitingForHandover = false;
         PlayGhostNormal();
+    }
+
+    /// <summary>
+    /// Starts the intro, once, without looping. The round calls this as the
+    /// countdown begins and calls PlayGhostNormal when it ends.
+    /// </summary>
+    public void PlayIntro()
+    {
+        if (musicSource == null || introMusic == null)
+        {
+            return;
+        }
+
+        _waitingForHandover = false;
+        musicSource.Stop();
+        musicSource.clip = introMusic;
+        musicSource.loop = false;
+        musicSource.Play();
     }
 
     /// <summary>Normal seal-state music, looping. Used from Assessment 2 onwards too.</summary>

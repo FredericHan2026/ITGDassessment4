@@ -14,7 +14,7 @@ using UnityEngine.UI;
 public class HUDController : MonoBehaviour
 {
     [Header("Level")]
-    [SerializeField] private string levelName = "LEVEL 01";
+    [SerializeField] private string levelName = "LEVEL 1";
     [SerializeField] private Text levelNameText;
 
     [Header("Score")]
@@ -207,6 +207,18 @@ public class HUDController : MonoBehaviour
         if (scaredText != null)
         {
             scaredText.text = "";
+        }
+    }
+
+    /// <summary>
+    /// Locks the HUD's controls. Used at game over, where the brief asks for
+    /// any UI buttons to be unusable.
+    /// </summary>
+    public void SetButtonsInteractable(bool interactable)
+    {
+        if (exitButton != null)
+        {
+            exitButton.interactable = interactable;
         }
     }
 
