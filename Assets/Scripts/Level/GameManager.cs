@@ -516,6 +516,68 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whatever state the seals that are still out there are in. A seal coming
+    /// home joins them rather than always reverting to normal.
+    /// </summary>
+    private GhostState GlobalGhostState
+    {
+        get
+        {
+            if (_scaredRemaining <= 0f)
+            {
+                return GhostState.Normal;
+            }
+
+            return _scaredRemaining <= recoveringSeconds
+                       ? GhostState.Recovering
+                       : GhostState.Scared;
+        }
+    }
+
+    /// <summary>Called by a seal the moment it gets back to the spawn area.</summary>
+    public void OnGhostReturnedHome(GhostController ghost)
+    {
+        if (ghost != null)
+        {
+            ghost.SetState(GlobalGhostState);
+        }
+
+        // The dead music belongs to the trip home, so it only ends when the
+        // last seal that was on one has arrived.
+        if (CountDead() == 0 && music != null)
+        {
+            if (GlobalGhostState == GhostState.Normal)
+            {
+                music.PlayGhostNormal();
+            }
+            else
+            {
+                music.PlayGhostScared();
+            }
+        }
+    }
+
+    private int CountDead()
+    {
+        if (ghosts == null)
+        {
+            return 0;
+        }
+
+        int dead = 0;
+
+        for (int i = 0; i < ghosts.Length; i++)
+        {
+            if (ghosts[i] != null && ghosts[i].State == GhostState.Dead)
+            {
+                dead++;
+            }
+        }
+
+        return dead;
+    }
+
     private void SetGhostsFrozen(bool frozen)
     {
         if (ghosts == null)

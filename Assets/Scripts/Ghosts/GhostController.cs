@@ -63,12 +63,16 @@ public class GhostController : MonoBehaviour
     [SerializeField] private LevelGenerator level;
     [SerializeField] private Transform target;
 
+    [Tooltip("Told when this seal gets home, so it can be put into whatever "
+             + "state the others are in and the music can be set back.")]
+    [SerializeField] private GameManager round;
+
     [Header("Speed")]
-    [SerializeField] private float normalTilesPerSecond = 3.5f;
-    [SerializeField] private float scaredTilesPerSecond = 2.5f;
+    [SerializeField] private float normalTilesPerSecond = 4.5f;
+    [SerializeField] private float scaredTilesPerSecond = 2.25f;
 
     [Tooltip("World units per second on the way home, in a straight line.")]
-    [SerializeField] private float deadUnitsPerSecond = 12f;
+    [SerializeField] private float deadUnitsPerSecond = 2.25f;
 
     [Header("Visuals")]
     [SerializeField] private Animator animator;
@@ -82,22 +86,23 @@ public class GhostController : MonoBehaviour
     [Tooltip("The lighter end of the pulse while frightened.")]
     [SerializeField] private Color scaredPulseTint = new Color(1f, 0.82f, 0.92f, 1f);
 
+    [Tooltip("Seal 4 only: how hard it is pushed out towards the outside wall "
+             + "as it circles. Higher hugs the boundary more tightly.")]
+    [SerializeField] private float outwardPull = 2f;
+
     [Tooltip("Pulses per second while frightened. Slow and soft.")]
     [SerializeField] private float pulseRate = 2f;
 
     [Tooltip("Flashes per second while recovering. Fast and hard.")]
     [SerializeField] private float flashRate = 6f;
 
-    [Header("Pen")]
-    [Tooltip("How long it sits in the pen after being eaten before heading out.")]
-    [SerializeField] private float penPauseSeconds = 1f;
-
     private Tweener _tweener;
     private GhostState _state = GhostState.Normal;
     private Vector2Int _cell;
     private Vector2Int _direction = Vector2Int.zero;
     private bool _leaving;
-    private float _hold;
+    private readonly Vector2Int[] _candidates = new Vector2Int[4];
+    private bool _hugging;
 
     /// <summary>While frozen the seal holds still, for the round countdown.</summary>
     public bool Frozen { get; set; }
@@ -150,14 +155,6 @@ public class GhostController : MonoBehaviour
         if (_state == GhostState.Dead)
         {
             TickDead();
-            return;
-        }
-
-        // Sitting in the pen for a beat after being eaten, so it does not pop
-        // straight back out of the doorway it arrived at.
-        if (_hold > 0f)
-        {
-            _hold -= Time.deltaTime;
             return;
         }
 
@@ -221,15 +218,51 @@ public class GhostController : MonoBehaviour
     }
 
     /// <summary>
-    /// Looks only at the four cells next door. Turning back on itself is a last
-    /// resort, so a seal in a corridor keeps going rather than dithering.
+    /// Looks only at the four cells next door, so no pathfinding is involved.
+    /// Turning back on itself is a last resort: only a dead end, or a tunnel
+    /// mouth being treated as a wall, can force it.
     /// </summary>
     private Vector2Int ChooseDirection()
     {
+        int n = Gather();
         Vector2Int back = new Vector2Int(-_direction.x, -_direction.y);
-        Vector2Int best = Vector2Int.zero;
-        float bestScore = 0f;
-        int seen = 0;
+
+        if (n == 0)
+        {
+            return CanEnter(_cell + back) ? back : Vector2Int.zero;
+        }
+
+        if (_leaving)
+        {
+            return TowardsExit(n);
+        }
+
+        // Frightened and recovering seals all hunt the way seal 1 does.
+        GhostBehaviour mode = IsEdible ? GhostBehaviour.Furthest : behaviour;
+
+        if (mode == GhostBehaviour.Furthest)
+        {
+            return PickByDistance(n, true);
+        }
+
+        if (mode == GhostBehaviour.Closest)
+        {
+            return PickByDistance(n, false);
+        }
+
+        if (mode == GhostBehaviour.Clockwise)
+        {
+            return FollowOutsideWall(n);
+        }
+
+        return _candidates[Random.Range(0, n)];
+    }
+
+    /// <summary>Collects the valid moves that are not a reversal.</summary>
+    private int Gather()
+    {
+        Vector2Int back = new Vector2Int(-_direction.x, -_direction.y);
+        int n = 0;
 
         for (int i = 0; i < All.Length; i++)
         {
@@ -240,63 +273,157 @@ public class GhostController : MonoBehaviour
                 continue;
             }
 
-            if (!CanEnter(_cell + dir))
+            if (CanEnter(_cell + dir))
+            {
+                _candidates[n++] = dir;
+            }
+        }
+
+        return n;
+    }
+
+    /// <summary>
+    /// Seals 1 and 2. Keeps every move that leaves PacStudent at least as far
+    /// away (or at least as close) as he is now, then picks among them at
+    /// random, so the same corner does not produce the same answer every time.
+    /// </summary>
+    private Vector2Int PickByDistance(int n, bool further)
+    {
+        float here = DistanceToTarget(_cell);
+        int keep = 0;
+
+        for (int i = 0; i < n; i++)
+        {
+            float there = DistanceToTarget(_cell + _candidates[i]);
+
+            if (further ? there >= here : there <= here)
+            {
+                _candidates[keep++] = _candidates[i];
+            }
+        }
+
+        // Nothing qualified, so take any valid move: a seal may never stop.
+        // Nothing was overwritten in that case, so the list is still intact.
+        if (keep == 0)
+        {
+            keep = n;
+        }
+
+        return _candidates[Random.Range(0, keep)];
+    }
+
+    /// <summary>
+    /// Seal 4. Two stages: strike out for the boundary, then hug it.
+    ///
+    /// Wall following on its own traces whichever wall it first touches, and
+    /// since it starts in the middle of the map that would be an inside block.
+    /// So it heads outward until it reaches the outer corridor, and only then
+    /// keeps the wall on its left, which carries it clockwise round the edge.
+    /// </summary>
+    private Vector2Int FollowOutsideWall(int n)
+    {
+        if (!_hugging && OnOuterRing(_cell))
+        {
+            _hugging = true;
+        }
+
+        return _hugging ? HugWall(n) : HeadOutward(n);
+    }
+
+    /// <summary>The corridor that runs just inside the outer wall.</summary>
+    private bool OnOuterRing(Vector2Int cell)
+    {
+        return cell.y <= 1 || cell.y >= level.Rows - 2
+               || cell.x <= 1 || cell.x >= level.Columns - 2;
+    }
+
+    /// <summary>Whichever step gets furthest from the middle, circling clockwise.</summary>
+    private Vector2Int HeadOutward(int n)
+    {
+        float centreX = (level.Columns - 1) * 0.5f;
+        float centreY = -(level.Rows - 1) * 0.5f;
+        float offsetX = _cell.x - centreX;
+        float offsetY = -_cell.y - centreY;
+
+        float tangentX = offsetY;
+        float tangentY = -offsetX;
+        float length = Mathf.Sqrt(tangentX * tangentX + tangentY * tangentY);
+
+        if (length > 0.0001f)
+        {
+            tangentX /= length;
+            tangentY /= length;
+        }
+
+        float radius = Mathf.Sqrt(offsetX * offsetX + offsetY * offsetY);
+        Vector2Int best = _candidates[0];
+        float bestScore = float.NegativeInfinity;
+
+        for (int i = 0; i < n; i++)
+        {
+            float stepX = _candidates[i].x;
+            float stepY = -_candidates[i].y;
+            float nextX = offsetX + stepX;
+            float nextY = offsetY + stepY;
+            float outward = Mathf.Sqrt(nextX * nextX + nextY * nextY) - radius;
+
+            float score = outwardPull * outward + stepX * tangentX + stepY * tangentY;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = _candidates[i];
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Wall on the left: try the left turn, then straight, then right.</summary>
+    private Vector2Int HugWall(int n)
+    {
+        Vector2Int[] order = { LeftOf(_direction), _direction, RightOf(_direction) };
+
+        for (int k = 0; k < order.Length; k++)
+        {
+            if (order[k] == Vector2Int.zero)
             {
                 continue;
             }
 
-            seen++;
-            float score = Score(dir, seen);
-
-            if (seen == 1 || score > bestScore)
+            for (int i = 0; i < n; i++)
             {
-                best = dir;
-                bestScore = score;
+                if (_candidates[i] == order[k])
+                {
+                    return _candidates[i];
+                }
             }
         }
 
-        if (seen > 0)
-        {
-            return best;
-        }
-
-        // Dead end: turning round is the only way out.
-        return CanEnter(_cell + back) ? back : Vector2Int.zero;
+        return _candidates[0];
     }
 
-    /// <summary>Higher is better. The seal's behaviour decides what that means.</summary>
-    private float Score(Vector2Int dir, int seen)
+    /// <summary>On the way out of the pen, the nearest step to the gap wins.</summary>
+    private Vector2Int TowardsExit(int n)
     {
-        // On the way out of the house it heads for its gap and nothing else.
-        // Right-hand following would otherwise circle the open pen forever.
-        if (_leaving)
-        {
-            return -Manhattan(_cell + dir, ExitCell);
-        }
+        Vector2Int best = _candidates[0];
+        float bestDistance = Manhattan(_cell + best, ExitCell);
 
-        // A frightened seal stops hunting and just scatters.
-        GhostBehaviour mode = IsEdible ? GhostBehaviour.Random : behaviour;
-
-        if (mode == GhostBehaviour.Random)
+        for (int i = 1; i < n; i++)
         {
-            return Random.value;
-        }
+            float d = Manhattan(_cell + _candidates[i], ExitCell);
 
-        if (mode == GhostBehaviour.Clockwise)
-        {
-            // Bear right first, then straight on, then left.
-            if (dir == Clockwise(_direction))
+            if (d < bestDistance)
             {
-                return 3f;
+                bestDistance = d;
+                best = _candidates[i];
             }
-
-            return dir == _direction ? 2f : 1f;
         }
 
-        float distance = DistanceToTarget(_cell + dir);
-        return mode == GhostBehaviour.Furthest ? distance : -distance;
+        return best;
     }
 
+    /// <summary>Straight-line distance from a cell to PacStudent.</summary>
     private float DistanceToTarget(Vector2Int cell)
     {
         if (target == null)
@@ -304,18 +431,46 @@ public class GhostController : MonoBehaviour
             return 0f;
         }
 
-        return Manhattan(cell, new Vector2Int(
-            Mathf.RoundToInt(target.position.x),
-            Mathf.RoundToInt(-target.position.y)));
+        Vector3 here = LevelGrid.CellToWorld(cell);
+        float dx = here.x - target.position.x;
+        float dy = here.y - target.position.y;
+        return Mathf.Sqrt(dx * dx + dy * dy);
     }
 
-    /// <summary>Grid distance. Not a path, just which way is nearer.</summary>
+    /// <summary>Grid distance, used only for the short walk out of the pen.</summary>
     private static float Manhattan(Vector2Int a, Vector2Int b)
     {
         return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
     }
 
-    private static Vector2Int Clockwise(Vector2Int dir)
+    /// <summary>A quarter turn to the left, as seen on screen.</summary>
+    private static Vector2Int LeftOf(Vector2Int dir)
+    {
+        if (dir == Up)
+        {
+            return Left;
+        }
+
+        if (dir == Left)
+        {
+            return Down;
+        }
+
+        if (dir == Down)
+        {
+            return Right;
+        }
+
+        if (dir == Right)
+        {
+            return Up;
+        }
+
+        return Vector2Int.zero;
+    }
+
+    /// <summary>A quarter turn to the right, as seen on screen.</summary>
+    private static Vector2Int RightOf(Vector2Int dir)
     {
         if (dir == Up)
         {
@@ -332,7 +487,12 @@ public class GhostController : MonoBehaviour
             return Left;
         }
 
-        return Up;
+        if (dir == Left)
+        {
+            return Up;
+        }
+
+        return Vector2Int.zero;
     }
 
     /// <summary>
@@ -402,7 +562,16 @@ public class GhostController : MonoBehaviour
         // gap is one way, so a seal that steps back inside is stuck there.
         _direction = Vector2Int.zero;
         _leaving = true;
-        _hold = penPauseSeconds;
+
+        // The round decides which state to come back in, so a seal eaten while
+        // the others are still frightened rejoins them rather than turning up
+        // as a hunter. It also puts the music back if nothing else is dead.
+        if (round != null)
+        {
+            round.OnGhostReturnedHome(this);
+            return;
+        }
+
         SetState(GhostState.Normal);
     }
 
@@ -499,7 +668,7 @@ public class GhostController : MonoBehaviour
         _direction = Vector2Int.zero;
         _state = GhostState.Normal;
         _leaving = true;
-        _hold = 0f;
+        _hugging = false;
 
         if (spriteRenderer != null)
         {
