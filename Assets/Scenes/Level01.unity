@@ -78755,16 +78755,17 @@ MonoBehaviour:
   respawnRow: 12
   level: {fileID: 100034}
   target: {fileID: 105414}
-  normalTilesPerSecond: 3.5
-  scaredTilesPerSecond: 2.5
-  deadUnitsPerSecond: 12
+  round: {fileID: 105722}
+  normalTilesPerSecond: 4.5
+  scaredTilesPerSecond: 2.25
+  deadUnitsPerSecond: 2.25
   animator: {fileID: 105442}
   spriteRenderer: {fileID: 105440}
   scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
   scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  outwardPull: 2
   pulseRate: 2
   flashRate: 6
-  penPauseSeconds: 1
 --- !u!1 &105448
 GameObject:
   m_ObjectHideFlags: 0
@@ -79127,16 +79128,17 @@ MonoBehaviour:
   respawnRow: 16
   level: {fileID: 100034}
   target: {fileID: 105414}
-  normalTilesPerSecond: 3.5
-  scaredTilesPerSecond: 2.5
-  deadUnitsPerSecond: 12
+  round: {fileID: 105722}
+  normalTilesPerSecond: 4.5
+  scaredTilesPerSecond: 2.25
+  deadUnitsPerSecond: 2.25
   animator: {fileID: 105474}
   spriteRenderer: {fileID: 105472}
   scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
   scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  outwardPull: 2
   pulseRate: 2
   flashRate: 6
-  penPauseSeconds: 1
 --- !u!1 &105480
 GameObject:
   m_ObjectHideFlags: 0
@@ -79499,16 +79501,17 @@ MonoBehaviour:
   respawnRow: 12
   level: {fileID: 100034}
   target: {fileID: 105414}
-  normalTilesPerSecond: 3.5
-  scaredTilesPerSecond: 2.5
-  deadUnitsPerSecond: 12
+  round: {fileID: 105722}
+  normalTilesPerSecond: 4.5
+  scaredTilesPerSecond: 2.25
+  deadUnitsPerSecond: 2.25
   animator: {fileID: 105506}
   spriteRenderer: {fileID: 105504}
   scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
   scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  outwardPull: 2
   pulseRate: 2
   flashRate: 6
-  penPauseSeconds: 1
 --- !u!1 &105512
 GameObject:
   m_ObjectHideFlags: 0
@@ -79871,16 +79874,17 @@ MonoBehaviour:
   respawnRow: 16
   level: {fileID: 100034}
   target: {fileID: 105414}
-  normalTilesPerSecond: 3.5
-  scaredTilesPerSecond: 2.5
-  deadUnitsPerSecond: 12
+  round: {fileID: 105722}
+  normalTilesPerSecond: 4.5
+  scaredTilesPerSecond: 2.25
+  deadUnitsPerSecond: 2.25
   animator: {fileID: 105538}
   spriteRenderer: {fileID: 105536}
   scaredTint: {r: 1, g: 0.58, b: 0.8, a: 1}
   scaredPulseTint: {r: 1, g: 0.82, b: 0.92, a: 1}
+  outwardPull: 2
   pulseRate: 2
   flashRate: 6
-  penPauseSeconds: 1
 --- !u!1 &105544
 GameObject:
   m_ObjectHideFlags: 0

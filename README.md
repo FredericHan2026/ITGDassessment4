@@ -146,29 +146,28 @@ Each seal has its own way of choosing, set in the Inspector:
 
 | Seal | Behaviour |
 | --- | --- |
-| 1 Sky | takes whichever turn leads furthest from PacStudent |
-| 2 Cocoa | takes whichever turn leads closest to PacStudent |
-| 3 Snow | picks at random |
-| 4 Slate | bears right, so it works its way round clockwise |
+| 1 Sky | picks at random among the moves that leave PacStudent at least as far away as he is now |
+| 2 Cocoa | picks at random among the moves that leave him at least as close |
+| 3 Snow | picks at random among every valid move |
+| 4 Slate | heads for the outer corridor, then keeps the wall on its left, which carries it clockwise around the map |
 
-While frightened they all scatter at random instead, and more slowly: 3.5 cells
-a second normally, 2.5 while edible.
+Distances are straight line. Seals 1 and 2 choose at random among everything
+that qualifies rather than taking the single best move, so the same corner does
+not give the same answer twice, and if nothing qualifies they take any valid
+move, because the one thing a seal may never do is stop.
 
-Each seal has its own frightened sprites, so Cocoa keeps its spots and Snow its
-bow rather than all four turning into the same shape. The artwork is flattened
-to grey and normalised so every seal's body lands on the same brightness,
-whatever colour it started as, and GhostController multiplies one pink over all
-of them: four recognisable seals, one tone of pink. Frightened, they pulse
-gently between two pinks; in the last seconds they flash hard between pink and
-white, which is only possible because a colour tint can darken but never
-brighten, so the art underneath has to be pale.
+Frightened and recovering seals all use seal 1's rule.
+
+Speeds are set against PacStudent: 90% of his 5 cells a second while normal,
+half that while frightened, and the same again while recovering or dead.
 
 The house has a gap top and bottom. Seals 1 and 3 use the top one, 2 and 4 the
 bottom, both on release and when they come back. The gap is one way: a seal can
 leave through it, and re-enter only when it has been eaten, so none of them can
 sit in the doorway instead of hunting. Once eaten, a seal heads straight back
-into the pen, walls and all, sits there for a second, and then walks out through
-its own gap the same way it does at the start of a round.
+into the pen, walls and all, and the moment it arrives the round puts it into
+whatever state the others are in and walks it out through its own gap. If it was
+the last one on its way home, the music goes back to matching that state.
 
 ## The bonus item
 
