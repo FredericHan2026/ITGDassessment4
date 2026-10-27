@@ -29,9 +29,10 @@ public class MenuController : MonoBehaviour
 
         if (level2Button != null)
         {
+            // Left interactable on purpose. The brief asks for both buttons to
+            // react to being highlighted and clicked; this one simply has
+            // nowhere to go until the design iteration scene exists.
             level2Button.onClick.AddListener(LoadLevel2);
-            // Greyed out until the design iteration scene is built.
-            level2Button.interactable = !string.IsNullOrEmpty(level2SceneName);
         }
     }
 

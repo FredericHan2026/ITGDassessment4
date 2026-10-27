@@ -39,6 +39,16 @@ public class CherryController : MonoBehaviour
 
     private void Update()
     {
+        Sweep();
+
+        // The gap is measured from the moment the last one went, so there is
+        // only ever one bonus item on screen at a time.
+        if (_active.Count > 0)
+        {
+            _sinceLast = 0f;
+            return;
+        }
+
         _sinceLast += Time.deltaTime;
 
         if (_sinceLast >= spawnInterval)
@@ -46,8 +56,6 @@ public class CherryController : MonoBehaviour
             _sinceLast = 0f;
             Spawn();
         }
-
-        Sweep();
     }
 
     private void Spawn()

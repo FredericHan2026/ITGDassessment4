@@ -33,6 +33,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform pelletParent;
     [SerializeField] private Transform powerPelletParent;
 
+    [Header("Effects")]
+    [Tooltip("Puff played around PacStudent at the spot where he dies.")]
+    [SerializeField] private BurstParticles deathBurst;
+
     [Header("Audio")]
     [SerializeField] private AudioManager music;
     [SerializeField] private SfxLibrary sfx;
@@ -127,6 +131,15 @@ public class GameManager : MonoBehaviour
                 into.Add(cell, child.gameObject);
             }
         }
+    }
+
+    /// <summary>
+    /// True when a cell still holds a pellet. PacStudent asks before each step
+    /// so he knows which of his two movement clips belongs to it.
+    /// </summary>
+    public bool HasPelletAt(Vector2Int cell)
+    {
+        return _pellets.ContainsKey(cell) || _powerPellets.ContainsKey(cell);
     }
 
     /// <summary>Called by PacStudent each time he finishes a step onto a cell.</summary>
@@ -244,9 +257,15 @@ public class GameManager : MonoBehaviour
 
         SetGhostsFrozen(true);
 
+        if (music != null)
+        {
+            music.PlayIntro();
+        }
+
         if (hud != null)
         {
             hud.SetTimerRunning(false);
+            hud.ResetTimer();
             hud.ShowMessage(Mathf.CeilToInt(countdownSeconds).ToString());
         }
     }
@@ -261,6 +280,12 @@ public class GameManager : MonoBehaviour
         }
 
         SetGhostsFrozen(false);
+
+        // The intro stops with the countdown text and the normal loop takes over.
+        if (music != null)
+        {
+            music.PlayGhostNormal();
+        }
 
         if (hud != null)
         {
@@ -342,7 +367,22 @@ public class GameManager : MonoBehaviour
         }
 
         ResetPositions();
-        BeginCountdown();
+
+        // The brief asks for him to be put back in the corner and left waiting
+        // for input, so there is no second countdown after a death.
+        _phase = Phase.Playing;
+
+        if (pacStudent != null)
+        {
+            pacStudent.Frozen = false;
+        }
+
+        SetGhostsFrozen(false);
+
+        if (hud != null)
+        {
+            hud.SetTimerRunning(true);
+        }
     }
 
     // -------------------------------------------------------- power pellet
@@ -610,6 +650,11 @@ public class GameManager : MonoBehaviour
 
         if (pacStudent != null)
         {
+            if (deathBurst != null)
+            {
+                deathBurst.Burst(pacStudent.transform.position);
+            }
+
             pacStudent.Die();
         }
 
@@ -667,7 +712,8 @@ public class GameManager : MonoBehaviour
         {
             hud.SetTimerRunning(false);
             hud.HideScared();
-            hud.ShowMessage(cleared ? "LEVEL CLEARED" : "GAME OVER");
+            hud.ShowMessage("GAME OVER");
+            hud.SetButtonsInteractable(false);
         }
 
         SaveHighScore();
