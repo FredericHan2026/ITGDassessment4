@@ -3,6 +3,16 @@
 Hi, my name's Frederic. This carries on from the previous build and turns the
 project into a playable game.
 
+## Continuing from Assessment 3
+
+This is a new repository, started from the finished Assessment 3 project. The
+first commit on `main` imports that project whole - the maze, the penguin and
+seal artwork, the animation clips and the audio - and everything after it is new
+work for this assessment.
+
+The previous repository is at
+<https://github.com/FredericHan2026/ITGDassessment3>.
+
 The Antarctic twist stays the same: PacStudent is a penguin, the ghosts are four
 distinctive seals, the pellets are krill, the power pellets are fish and the
 bonus item is a squid.
