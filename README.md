@@ -6,8 +6,7 @@ I've decided to take the game on with an Antarctic twist:
 PacStudent is a penguin, the ghosts are four distinctive seals, the pellets are krill, the power pellets are fish and the bonus item is a squid.
 
 This is a new repository, continued from my Assessment 3 project at
-<https://github.com/FredericHan2026/ITGDassessment3>. The first commit imports
-that project whole and everything after it is new work.
+<https://github.com/FredericHan2026/ITGDassessment3>.
 
 ## Play
 
