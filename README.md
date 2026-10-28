@@ -3,6 +3,38 @@
 Hi, my name's Frederic. This carries on from the previous build and turns the
 project into a playable game.
 
+## Continuing from Assessment 3
+
+This is a new repository, started from the finished Assessment 3 project. The
+first commit on `main` imports that project whole - the maze, the penguin and
+seal artwork, the animation clips and the audio - and everything after it is new
+work for this assessment.
+
+The previous repository is at
+<https://github.com/FredericHan2026/ITGDassessment3>.
+
+## How this repository is laid out
+
+`dev` stems from `main`, and every grade band has its own feature branch off
+`dev` with several commits on it, merged back with `--no-ff` once the band was
+finished so each band stays visible as its own block in the history. `dev` is
+merged into `main` at the end.
+
+| Branch | Band |
+| --- | --- |
+| `feature/repository` | 10% git repository |
+| `feature/level-setup` | 20% project structure |
+| `feature/start-scene` | 30% start screen |
+| `feature/hud` | 40% in-game UI |
+| `feature/pacstudent-movement` | 55% PacStudent and cherry movement |
+| `feature/collisions-scoring` | 70% collisions, UI functionality, high scores |
+| `feature/ghost-ai` | 85% ghost movement and AI |
+
+The `fix/` and `polish/` branches that follow them are later corrections and
+tuning, each branched from `dev` and merged back the same way.
+
+Run `git log --graph --oneline --all` to see the shape of it.
+
 The Antarctic twist stays the same: PacStudent is a penguin, the ghosts are four
 distinctive seals, the pellets are krill, the power pellets are fish and the
 bonus item is a squid.
